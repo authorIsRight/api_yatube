@@ -2,8 +2,13 @@ from django.shortcuts import get_object_or_404
 from rest_framework import viewsets
 from rest_framework.views import PermissionDenied
 
-from posts.models import Post, Group
-from .serializers import PostSerializer, GroupSerializer, CommentSerializer
+from posts.models import Group, Post
+from .serializers import CommentSerializer, GroupSerializer, PostSerializer
+
+
+def get_post(self):
+    """Используем в CommentViewSet для получения поста"""
+    return get_object_or_404(Post, pk=self.kwargs.get('post_id'))
 
 
 class GroupViewSet(viewsets.ReadOnlyModelViewSet):
@@ -33,15 +38,11 @@ class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
 
     def perform_create(self, serializer):
-        post_id = self.kwargs.get('post_id')
-        post = get_object_or_404(Post, pk=post_id)
-        serializer.save(author=self.request.user, post=post)
+        serializer.save(author=self.request.user, post=get_post(self))
 
     def get_queryset(self):
-        post_id = self.kwargs.get('post_id')
-        post = get_object_or_404(Post, pk=post_id)
-        new_queryset = post.comments.all()
-        return new_queryset
+        post = get_post(self)
+        return post.comments.all()
 
     def perform_update(self, serializer):
         if serializer.instance.author != self.request.user:
